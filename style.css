@@ -1,0 +1,11 @@
+#map { 
+	height: 700px; 
+	width: 1000px;
+	left: 190px;
+}
+
+#datepicker {
+	width: 210px;
+	border-bottom: 2px solid;
+	margin-top: 7px;
+}

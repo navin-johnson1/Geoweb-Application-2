@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>2017 Traffic Incidents & Building-Permits Info</title>
+		<!-- Personal Stylesheet -->
+		<link rel="stylesheet" href="style.css">
+
+        <!-- Leaflet's CSS -->
+		<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="crossorigin=""/>
+
+        <!-- Leaflet's JavaScript -->
+    	<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="crossorigin="">
+        </script>
+
+        <!-- jQuery library -->
+   		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js">
+        </script>
+
+        <!-- Date Range Selector -->
+		<script type="text/javascript" src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+		<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+		<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+        <!-- Overlapping Marker Spiderfier -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/OverlappingMarkerSpiderfier-Leaflet/0.2.6/oms.min.js"></script>
+
+		<!-- MarkerCluster -->
+		<script type="text/javascript" src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster-src.js"></script>
+		<link rel="stylesheet" type="text/css" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+		<link rel="stylesheet" type="text/css" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    </head>
+    <body style="text-align:center">
+        <br><br>
+		<a href="https://data.calgary.ca/Business-and-Economic-Activity/Building-Permits/c2es-76ed" target="__blank">
+			<img src="City_of_Calgary_logo.png" width="128" height="150" />
+		</a>
+		<a href="https://data.calgary.ca/Transportation-Transit/Traffic-Incidents-Archive-2017/himp-urp7/data" target="__blank">
+			<img src="traffic.jpg"width="128" height="150" />
+		</a>
+		<h1>Welcome!!</h1>
+		<p>On first arrival, you can see the traffic incidents in Calgary in the year 2017. 
+			To switch to view the building permits, please click on the button on the top right corner of the map.
+			After switching to the building permits layers, please follow the instructions below. 
+		</p>
+		<h2>Instructions</h2>
+		<p>Below, you will see 2 calendars side-by-side</p>
+        <p>Please enter a date range ("from" and "till")</p>
+        <p>Once you click "Apply", all the building permits in your specified range will appear on the map below:</p>
+        Select a date range:
+		<input type="text" id="datepicker"/>
+		<br><br>
+		<div id="map"></div>
+		 <script type="text/javascript">
+		 	//Placing the map over Calgary
+		 	var map = L.map('map').setView([51.0447, -114.0719], 10.5);
+		 	map.options.minZoom = 5;
+		 	map.options.maxZoom = 17;
+		
+		 	//Adding tile layer to the map. Obtained from MapTiler
+			L.tileLayer('https://api.maptiler.com/maps/hybrid/256/{z}/{x}/{y}.jpg?key=6BQ0CZDKVn6ANQ8WZeQv', {
+				attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
+			}).addTo(map);
+
+			
+            //Adding the 2017 traffic incident layer onto the map
+            var traffic_incidents = L.tileLayer('https://api.mapbox.com/styles/v1/navin-johnson/ckzuuof11001z14p7soiurwqe/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibmF2aW4tam9obnNvbiIsImEiOiJja3pzem1hbGkwZnNuMm5wazVuMHlkNmRjIn0.EEUULT3_bwkMJWggNck91A',{
+				attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+			}).addTo(map);
+
+			//Switch between maps
+            var base={
+				"<span style='color: gray'>Traffic Incidents in 2017</span>":traffic_incidents,
+                "<span style='color: gray'>Bulding Permits</span>":map
+            };
+		 	L.control.layers(base).addTo(map);
+
+			$(function (){
+				//Using Spiderfier Leaflet
+				var oms = new OverlappingMarkerSpiderfier(map)
+				var popup = new L.Popup();
+				oms.addListener('spiderfy', function(marker) {map.closePopup();
+				});
+
+				//Using MarkCluster leaflet 
+				var markercluster = L.markerClusterGroup();
+				
+				//Date Range Selector
+				$("#datepicker").daterangepicker({opens: 'center'},function (start,end,label){
+					var start = start.format("YYYY-MM-DD")
+					var end = end.format("YYYY-MM-DD")
+					const URL = "https://data.calgary.ca/resource/c2es-76ed.geojson?$where=issueddate >= '" +start+ "' and issueddate <= '" +end+ "'"
+					
+					//Used ajax to make HTTP requests in JavaScript
+					$.ajax({
+					    url: URL,
+					    type: "GET",		    
+					    data:{
+					      "$limit" : 5000,
+					    }
+					}).then(function(data) {
+						//Setting geoJSON variable 
+						var geojson_permit = data
+						//New data set entered when selecting another date
+						markercluster.clearLayers()
+
+						L.geoJson(geojson_permit,{
+							pointToLayer: function(feature,latlong){
+								//Displaying the Markers on Leaflet map
+								var marker=L.marker(latlong)
+
+								oms.addMarker(marker)
+								
+								//Mark Cluster Leaflet
+								markercluster.addLayer(marker);
+								return marker
+							},
+
+							onEachFeature: function(feature,layer){
+								//Displaying the information on the marker using bindPopup
+								const text="Issued Date: "+feature.properties.issueddate+ '</br>'+ "Work Class Group: "+ feature.properties.workclassgroup+ '</br>'+ "Contractor Name: "+feature.properties.contractorname+ '</br>'+ "Community Name: "+ feature.properties.communityname+ '</br>'+"Original Address: "+feature.properties.originaladdress+'</br>'
+
+								layer.bindPopup(text)
+							}
+						})
+						//Adding the marker cluster layer to the map
+						map.addLayer(markercluster);
+						})
+					})
+				})
+		</script>
+		<br><br>
+		<p><em><b>You can click the City of Calgary's logo to view the building permit data source.</b></em></p>
+		<p><em><b>You can click the picture of Calgary traffic (to the right of the logo) to view the traffic incidents data source.</b></em></p>
+    </body>
+</html>
